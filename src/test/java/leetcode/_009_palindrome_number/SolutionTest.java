@@ -14,11 +14,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SolutionTest {
 
-    private final Solution testedSolution = new Solution_npp1();
+
+    //    private final Solution testedSolution = new Solution_npp2(); //The slowest
+    //    private final Solution testedSolution = new Solution_npp1(); // about 30 percents faster
+    private final Solution testedSolution = new Solution_npp3(); // about 80 percent faster
+
+
     private static final int AMOUNT_OF_TEST_SETS = 10;
     private static final int AMOUNT_OF_VALUES_IN_ONE_SET = 900000;
     private static final List<List<Integer>> testSets = new ArrayList<>();
-    static{
+
+    static {
         for (int i = 0; i < AMOUNT_OF_TEST_SETS; i++) {
             testSets.add(generateValuesForPerformanceTest(AMOUNT_OF_VALUES_IN_ONE_SET));
         }
@@ -31,10 +37,10 @@ class SolutionTest {
         assertEquals(expected, testedSolution.isPalindrome(value));
     }
 
-    @RepeatedTest(value =  10)
+    @RepeatedTest(value = 10)
     void performanceTest() {
-        for(List<Integer> testSet: testSets) {
-            for (Integer value:   testSet) {
+        for (List<Integer> testSet : testSets) {
+            for (Integer value : testSet) {
 //            System.out.println(value + (testedSolution.isPalindrome(value)? " is palindrome" : " is not palindrome"));
                 testedSolution.isPalindrome(value);
             }
@@ -46,20 +52,23 @@ class SolutionTest {
 
     private static Stream<Arguments> provideEqualsCombinations() {
         return Stream.of(
-                Arguments.of(1221, true),
-                Arguments.of(11, true),
-                Arguments.of(1, true),
-                Arguments.of(0, true),
-                Arguments.of(12121, true),
-                Arguments.of(1121, false),
-                Arguments.of(122, false),
-                Arguments.of(2113, false),
-                Arguments.of(21, false),
-                Arguments.of(12, false),
-                Arguments.of(-1221, false),
-                Arguments.of(-121, false),
-                Arguments.of(-2113, false),
-                Arguments.of(-21, false),
+//                Arguments.of(1221, true),
+//                Arguments.of(11, true),
+//                Arguments.of(1, true),
+//                Arguments.of(0, true),
+//                Arguments.of(12121, true),
+//                Arguments.of(1121, false),
+//                Arguments.of(122, false),
+//                Arguments.of(2113, false),
+//                Arguments.of(21, false),
+//                Arguments.of(12, false),
+//                Arguments.of(-1221, false),
+//                Arguments.of(-121, false),
+//                Arguments.of(-2113, false),
+//                Arguments.of(-21, false),
+                Arguments.of(Integer.MIN_VALUE, false),
+                Arguments.of(Integer.MAX_VALUE, false),
+//                Arguments.of(-21, false),
                 Arguments.of(-12, false)
         );
     }

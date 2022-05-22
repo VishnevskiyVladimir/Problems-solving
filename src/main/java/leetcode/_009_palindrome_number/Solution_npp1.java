@@ -1,6 +1,7 @@
 package leetcode._009_palindrome_number;
 
 public class Solution_npp1 extends Solution{
+    @Override
     public boolean isPalindrome(int x) {
         String s = String.valueOf(x);
         int len = s.length();
