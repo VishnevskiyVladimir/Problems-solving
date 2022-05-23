@@ -7,7 +7,8 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 class SolutionTest {
-    Solution solution = new Solution();
+//    Solution solution = new Solution();
+    Solution solution = new Solution_npp1();
 
 
 

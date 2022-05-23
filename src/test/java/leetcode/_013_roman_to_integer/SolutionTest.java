@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SolutionTest {
-    private final Solution solution = new Solution();
+    private final Solution solution = new Solution_npp1();
 
     @Test
     void test1() {
