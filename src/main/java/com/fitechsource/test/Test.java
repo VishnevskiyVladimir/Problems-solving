@@ -1,8 +1,6 @@
 package com.fitechsource.test;
 
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -21,10 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Please attach code files to email - skhisamov@fitechsource.com
  */
 
-@Slf4j
 public class Test {
-
-    public static final int CHECK_THREADS_INTERVAL_MILLIS = 300;
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -36,7 +31,7 @@ public class Test {
 //            processSingleThreaded();
             processMultiThreaded();
         }
-        log.info("Average execution time is {} ms.", (System.currentTimeMillis() - start) / numberOfIterations);
+        System.out.println("Average execution time is " + (System.currentTimeMillis() - start) / numberOfIterations + " ms.");
 
     }
 
@@ -48,7 +43,7 @@ public class Test {
                 res.addAll(TestCalc.calculate(i));
             }
         } catch (TestException e) {
-            log.error(e.getMessage());
+            e.printStackTrace();
             return;
         }
 
@@ -57,8 +52,11 @@ public class Test {
 
     private static void processMultiThreaded() throws InterruptedException {
 
+
         //flag for stopping other threads if one of them thrown an exception
         final AtomicBoolean exceptionThrown = new AtomicBoolean(false);
+
+        final int CHECK_THREADS_INTERVAL_MILLIS = 300;
 
         Set<Double> res = Collections.synchronizedSet(new HashSet<>());
         ArrayList<Thread> threads = new ArrayList<>();
@@ -87,11 +85,12 @@ public class Test {
                         res.addAll(TestCalc.calculate(j));
                     }
                 } catch (TestException e) {
-                    log.error("{} thrown TestException. ", Thread.currentThread().getName(), e);
+                    System.out.println(Thread.currentThread().getName() + " thrown TestException.");
+                    e.printStackTrace();
                     exceptionThrown.set(true);
                     return;
                 }
-                log.trace("Thread {} successfully finished work.", Thread.currentThread().getName());
+                System.out.println("Thread " + Thread.currentThread().getName() + " successfully finished work.");
             });
             threads.add(thread);
             firstIndex = lastIndex;
@@ -101,17 +100,14 @@ public class Test {
             while (true) {
                 try {
                     Thread.sleep(CHECK_THREADS_INTERVAL_MILLIS);
-                } catch (InterruptedException ex) {
-                    log.error("{} thread was interrupted", Thread.currentThread().getName(), ex);
+                } catch (InterruptedException e) {
+                    System.out.println(Thread.currentThread().getName() + " thread was interrupted");
+                    e.printStackTrace();
                 }
                 if (exceptionThrown.get()) {
                     for (Thread thread : threads) {
-                        //On my pc thread.isInterrupted() always returns false
-                        // and because of that worker-0 is interrupted second time. Google says its known issue.
-                        if (!thread.isInterrupted()) {
-                            thread.interrupt();
-                            log.warn("Coordinator thread interrupted {}.", thread.getName());
-                        }
+                        thread.interrupt();
+                        System.out.println(" Coordinator interrupted " + thread.getName());
                     }
                     return;
                 }
@@ -121,25 +117,24 @@ public class Test {
         coordinator.setName("Coordinator");
         coordinator.setDaemon(true);
         coordinator.start();
-        log.trace("Coordinator is started.");
+
 
         for (int i = 0; i < threads.size(); i++) {
             threads.get(i).setPriority(Thread.MAX_PRIORITY);
             String curThreadName = "worker-" + i;
             threads.get(i).setName(curThreadName);
             threads.get(i).start();
-            log.trace("{} is started.", curThreadName);
         }
 
 //        Uncomment to interrupt worker-0 and test exceptions
-        threads.get(0).interrupt();
+//        threads.get(0).interrupt();
 
         for (Thread thread : threads) {
             thread.join();
         }
 
         if (!exceptionThrown.get()) {
-            log.trace("Calculations in multithreaded mode finished successfully.");
+            System.out.println("Calculations in multithreaded mode finished successfully.");
             System.out.println(res);
         }
     }
