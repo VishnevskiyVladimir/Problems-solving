@@ -5,7 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.stream.IntStream;
 
 /**
  * Should be improved to reduce calculation time.
@@ -20,122 +21,75 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 
 public class Test {
+    public static void main(String[] args) throws InterruptedException, TestException {
+//        long start = System.currentTimeMillis();
 
-    public static void main(String[] args) throws InterruptedException {
+        //Toggle implementations
+//        processSingleThreaded();
+        processMultiThreaded();
 
-        int numberOfIterations = 1;
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < numberOfIterations; i++) {
-
-//            Toggle implementations
-//            processSingleThreaded();
-            processMultiThreaded();
-        }
-        System.out.println("Average execution time is " + (System.currentTimeMillis() - start) / numberOfIterations + " ms.");
-
+//        System.out.println("Execution time is " + (System.currentTimeMillis() - start) + " ms.");
     }
 
-    private static void processSingleThreaded() {
+    private static void processSingleThreaded() throws TestException {
         Set<Double> res = new HashSet<>();
 
-        try {
-            for (int i = 0; i < TestConsts.N; i++) {
-                res.addAll(TestCalc.calculate(i));
-            }
-        } catch (TestException e) {
-            e.printStackTrace();
-            return;
+        for (int i = 0; i < TestConsts.N; i++) {
+            res.addAll(TestCalc.calculate(i));
         }
 
         System.out.println(res);
     }
 
     private static void processMultiThreaded() throws InterruptedException {
-
-
-        //flag for stopping other threads if one of them thrown an exception
-        final AtomicBoolean exceptionThrown = new AtomicBoolean(false);
-
-        final int CHECK_THREADS_INTERVAL_MILLIS = 300;
-
         Set<Double> res = Collections.synchronizedSet(new HashSet<>());
-        ArrayList<Thread> threads = new ArrayList<>();
 
-        int minIterationsPerOneThread = TestConsts.N / TestConsts.MAX_THREADS;
-        int remainingIterations = TestConsts.N % TestConsts.MAX_THREADS;
+        ArrayList<WorkerThread> workers = new ArrayList<>(TestConsts.MAX_THREADS);
 
-        int firstIndex = 0;
+        ArrayBlockingQueue<Integer> tasks = new ArrayBlockingQueue<>(TestConsts.N);
+        IntStream.rangeClosed(0, TestConsts.N - 1).boxed().forEach(tasks::add);
+
         for (int i = 0; i < TestConsts.MAX_THREADS; i++) {
-            int lastIndex = firstIndex + minIterationsPerOneThread;
-            if (remainingIterations > 0) {
-                lastIndex++;
-                remainingIterations--;
-            }
+            workers.add(new WorkerThread(res, tasks));
+        }
 
-////          DEV: checking first and last index on each iteration
-//            log.trace("firstIndex = {}", firstIndex);
-//            log.trace("lastIndex = {}", lastIndex);
+        for (WorkerThread worker : workers) {
+            worker.start();
+        }
 
+        for (WorkerThread worker : workers) {
+            worker.join();
+        }
 
-            int finalFirstIndex = firstIndex;
-            int finalLastIndex = lastIndex;
-            Thread thread = new Thread(() -> {
-                try {
-                    for (int j = finalFirstIndex; j < finalLastIndex; j++) {
-                        res.addAll(TestCalc.calculate(j));
+        System.out.println(res);
+    }
+
+    static class WorkerThread extends Thread {
+
+        private Set<Double> res;
+        private ArrayBlockingQueue<Integer> tasks;
+
+        WorkerThread(Set<Double> res, ArrayBlockingQueue<Integer> tasks) {
+            this.res = res;
+            this.tasks = tasks;
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (true) {
+                    Integer element = tasks.poll();
+//                    System.out.println(Thread.currentThread().getName() + " took element(" + element + "). Time is " + System.currentTimeMillis());
+                    if (element != null) {
+                        res.addAll(TestCalc.calculate(element));
+                    } else {
+                        return;
                     }
-                } catch (TestException e) {
-                    System.out.println(Thread.currentThread().getName() + " thrown TestException.");
-                    e.printStackTrace();
-                    exceptionThrown.set(true);
-                    return;
                 }
-                System.out.println("Thread " + Thread.currentThread().getName() + " successfully finished work.");
-            });
-            threads.add(thread);
-            firstIndex = lastIndex;
-        }
-
-        final Thread coordinator = new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(CHECK_THREADS_INTERVAL_MILLIS);
-                } catch (InterruptedException e) {
-                    System.out.println(Thread.currentThread().getName() + " thread was interrupted");
-                    e.printStackTrace();
-                }
-                if (exceptionThrown.get()) {
-                    for (Thread thread : threads) {
-                        thread.interrupt();
-                        System.out.println(" Coordinator interrupted " + thread.getName());
-                    }
-                    return;
-                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(1);
             }
-        });
-
-        coordinator.setName("Coordinator");
-        coordinator.setDaemon(true);
-        coordinator.start();
-
-
-        for (int i = 0; i < threads.size(); i++) {
-            threads.get(i).setPriority(Thread.MAX_PRIORITY);
-            String curThreadName = "worker-" + i;
-            threads.get(i).setName(curThreadName);
-            threads.get(i).start();
-        }
-
-//        Uncomment to interrupt worker-0 and test exceptions
-//        threads.get(0).interrupt();
-
-        for (Thread thread : threads) {
-            thread.join();
-        }
-
-        if (!exceptionThrown.get()) {
-            System.out.println("Calculations in multithreaded mode finished successfully.");
-            System.out.println(res);
         }
     }
 }
